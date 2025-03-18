@@ -47,7 +47,7 @@ class GUI:
             color = "white"
             self.canvas.create_text(x1 + 15, y1 + 15, text="D", fill="black", font=("Arial", 12))
         self.canvas.create_oval(x1, y1, x2, y2, fill=color)
-
+        
     def highlight_possible_moves(self, start):
         """Met en surbrillance les cases où un pion peut se déplacer"""
         row, col = start

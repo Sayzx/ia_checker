@@ -49,6 +49,8 @@ class Board:
         if end_row == 0 and piece == 'B':  # Pion blanc atteint la dernière ligne
             self.board[end_row][end_col] = 'BD'  # BD = Dame blanche
             print("Un pion blanc est devenu une dame !")  # Log pour débogage
+            # changer le style de la piece avec une couronne
+    
         elif end_row == 7 and piece == 'N':  # Pion noir atteint la dernière ligne
             self.board[end_row][end_col] = 'ND'  # ND = Dame noire
             print("Un pion noir est devenu une dame !")  # Log pour débogage
