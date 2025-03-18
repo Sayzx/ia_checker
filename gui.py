@@ -40,10 +40,10 @@ class GUI:
             color = "black"
         elif piece == 'B':
             color = "white"
-        elif piece == 'ND':
+        elif piece == 'ND':  # Dame noire
             color = "black"
             self.canvas.create_text(x1 + 15, y1 + 15, text="D", fill="white", font=("Arial", 12))
-        elif piece == 'BD':
+        elif piece == 'BD':  # Dame blanche
             color = "white"
             self.canvas.create_text(x1 + 15, y1 + 15, text="D", fill="black", font=("Arial", 12))
         self.canvas.create_oval(x1, y1, x2, y2, fill=color)
