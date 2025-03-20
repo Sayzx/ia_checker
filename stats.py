@@ -1,10 +1,15 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
 class GameStats:
-    def __init__(self, file_path="data/games_history.xlsx"):
+    def __init__(self, file_path="data/games_stats.xlsx"):
         self.file_path = file_path
         self.data = []
+        
+        # Créer le dossier data s'il n'existe pas
+        if not os.path.exists("data"):
+            os.makedirs("data")
 
     def record_move(self, player, move):
         self.data.append({"player": player, "move": move})
