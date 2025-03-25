@@ -63,87 +63,60 @@ class Board:
     def is_valid_move(self, start, end):
         x1, y1 = start
         x2, y2 = end
-        
+
         if not (0 <= x1 < 8 and 0 <= y1 < 8 and 0 <= x2 < 8 and 0 <= y2 < 8):
             return False
-            
+
         piece = self.board[x1][y1]
         if not piece or self.board[x2][y2]: 
             return False
-            
+
         if self.mandatory_jump_piece and (x1, y1) != self.mandatory_jump_piece:
             return False
-            
+
         dx, dy = abs(x2 - x1), abs(y2 - y1)
-        
-        if not self.mandatory_jump_piece:
-            must_capture = self.has_capture(piece[0])
-            if must_capture and (dx != 2 or dy != 2):
-                return False
-        
-        if 'D' in piece:
-            if dx == dy: 
+
+        if 'D' in piece:  # Dame
+            if dx == dy:  # Déplacement diagonal
                 step_x = 1 if x2 > x1 else -1
                 step_y = 1 if y2 > y1 else -1
-                
-                if dx > 1:
-                    capture_count = 0
-                    enemy_positions = []
-                    
-                    for i in range(1, dx):
-                        check_x, check_y = x1 + i * step_x, y1 + i * step_y
-                        if self.board[check_x][check_y]:
-                            if self.board[check_x][check_y][0] == piece[0]:
-                                return False
-                            else:
-                                capture_count += 1
-                                enemy_positions.append((check_x, check_y))
-                    
-                    if capture_count > 1:
-                        return False
-                    elif capture_count == 1:
-                        enemy_x, enemy_y = enemy_positions[0]
-                        between_x1_enemy = abs(enemy_x - x1)
-                        for i in range(between_x1_enemy + 1, dx):
-                            if self.board[x1 + i * step_x][y1 + i * step_y]:
-                                return False
-                                
+                for i in range(1, dx):
+                    check_x, check_y = x1 + i * step_x, y1 + i * step_y
+                    if self.board[check_x][check_y]:
+                        if self.board[check_x][check_y][0] == piece[0]:  # Obstacle de même couleur
+                            return False
                 return True
-                
-        else:
-            if dx == dy == 1:  #
-                if piece == 'B' and x2 > x1:  
-                    return False
-                if piece == 'N' and x2 < x1:
-                    return False
+            return False
+
+        else:  # Pion normal
+            if dx == dy == 1:  # Déplacement simple
                 return True
-                
             if dx == dy == 2:  # Capture
                 mid_row, mid_col = (x1 + x2) // 2, (y1 + y2) // 2
                 mid_piece = self.board[mid_row][mid_col]
-                if mid_piece and mid_piece[0] != piece[0]:
+                if mid_piece and mid_piece[0] != piece[0]:  # Vérifie qu'il y a une pièce ennemie à capturer
                     return True
-                    
+
         return False
+
 
     def get_valid_moves(self, row, col):
         piece = self.board[row][col]
         if not piece:
             return []
             
+        # Si un pion est forcé de capturer, limiter les mouvements à ce pion
         if self.mandatory_jump_piece and (row, col) != self.mandatory_jump_piece:
             return []
             
-        must_capture = False
-        if not self.mandatory_jump_piece:
-            must_capture = self.has_capture(piece[0])
-            
         moves = []
+        capture_moves = self.get_capture_moves(row, col)
         
-        if must_capture:
-            return self.get_capture_moves(row, col)
-            
-        if 'D' in piece:
+        if capture_moves:
+            return capture_moves  # Priorité aux captures
+        
+        # Si aucune capture n'est obligatoire, calcule les mouvements normaux
+        if 'D' in piece:  # Dame
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
             for dx, dy in directions:
                 for distance in range(1, 8):
@@ -151,11 +124,15 @@ class Board:
                     if 0 <= new_row < 8 and 0 <= new_col < 8:
                         if not self.board[new_row][new_col]: 
                             moves.append((new_row, new_col))
-                        else:  
+                        else:
+                            if self.board[new_row][new_col][0] != piece[0]:  # Pièce ennemie
+                                target_row, target_col = new_row + dx, new_col + dy
+                                if 0 <= target_row < 8 and 0 <= target_col < 8 and not self.board[target_row][target_col]:
+                                    moves.append((target_row, target_col))
                             break
-                    else: 
+                    else:
                         break
-        else:
+        else:  # Pion normal
             directions = [(-1, -1), (-1, 1)] if piece == 'B' else [(1, -1), (1, 1)]
             for dx, dy in directions:
                 new_row, new_col = row + dx, col + dy
@@ -213,10 +190,17 @@ class Board:
         return False
 
     def has_valid_moves(self, player):
+        print(f"Coup possible pour le joueur {player}:")
         for row in range(8):
             for col in range(8):
                 piece = self.board[row][col]
                 if piece and piece[0] == player:
-                    if self.get_valid_moves(row, col) or self.get_capture_moves(row, col):
+                    valid_moves = self.get_valid_moves(row, col)
+                    if valid_moves:  # Vérifie les mouvements normaux
+                        print(f"  Pièce à ({row}, {col}) peut se déplacer vers : {valid_moves}")
+                        return True
+                    capture_moves = self.get_capture_moves(row, col)
+                    if capture_moves:  # Vérifie les captures
+                        print(f"  Pièce à ({row}, {col}) peut capturer vers : {capture_moves}")
                         return True
         return False

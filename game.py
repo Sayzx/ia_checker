@@ -5,6 +5,7 @@ from board import Board
 from gui import GUI
 from ia import CheckersAI
 from stats import GameStats
+from datetime import datetime
 
 class Game:
     def __init__(self, root):
@@ -40,6 +41,7 @@ class Game:
         if best_move is None:
             self.game_over = True
             self.update_status_message("Partie terminée! Vous avez gagné!")
+            self.end_game() 
             return
 
         start, end = best_move
@@ -99,7 +101,7 @@ class Game:
         if self.selected_piece:
             start_row, start_col = self.selected_piece
 
-            if (row, col) == (start_row, start_col): 
+            if (row, col) == (start_row, start_col):  # Change
                 self.selected_piece = None
                 self.gui.draw_board()
                 self.update_status_message("Pièce désélectionnée.")
@@ -145,19 +147,22 @@ class Game:
             self.update_status_message("Partie terminée! L'IA a gagné!")
         else:
             self.update_status_message("Partie terminée!")
-            
+        print("Partie terminée!")
         self.stats.save_game()
-        
-        self.save_game_to_excel()
+        print("Sauvegarde de la partie.")
+        self.save_game_to_csv()
             
-    def save_game_to_excel(self):
+
+    def save_game_to_csv(self):
         game_data = []
 
+        # Construction des données des mouvements
         for i, move in enumerate(self.moves_history):
             start, end = move
-            player = "B" if i % 2 == 0 else "N" 
+            player = "B" if i % 2 == 0 else "N"
             captured_piece = None
 
+            # Vérification de la prise d'une pièce (si saut)
             if abs(start[0] - end[0]) > 1:
                 mid_row = (start[0] + end[0]) // 2
                 mid_col = (start[1] + end[1]) // 2
@@ -166,22 +171,39 @@ class Game:
             game_data.append({
                 "Turn": i + 1,
                 "Player": player,
-                "Start": start,
-                "End": end,
-                "Captured Piece": captured_piece
+                "Start": str(start),
+                "End": str(end),
+                "Captured Piece": str(captured_piece)
             })
+
+        # Détermination du gagnant
+        winner = "IA" if not self.board.has_valid_moves("B") else "Joueur"
+
+        game_data.append({
+            "Turn": "Résultat",
+            "Player": "",
+            "Start": "",
+            "End": "",
+            "Captured Piece": winner
+        })
 
         df = pd.DataFrame(game_data)
 
-        if not os.path.exists("data"):
-            os.makedirs("data")
+        # Création du dossier "data" s'il n'existe pas
+        os.makedirs("data", exist_ok=True)
 
-        excel_path = "data/game_history.xlsx"
+        csv_path = "data/game_history.csv"
 
-        if os.path.exists(excel_path):
-            with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-                import datetime
-                sheet_name = f"Game_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
-        else:-
-            df.to_excel(excel_path, sheet_name="Game_1", index=False)
+        try:
+            # Vérifier si le fichier CSV existe
+            if os.path.exists(csv_path):
+                # Ajouter les nouvelles données sans l'en-tête
+                df.to_csv(csv_path, mode='a', header=False, index=False)
+                print("Données ajoutées au fichier CSV existant.")
+            else:
+                # Créer un nouveau fichier avec l'en-tête
+                df.to_csv(csv_path, index=False)
+                print("Nouveau fichier CSV créé.")
+
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde du fichier CSV : {e}")
