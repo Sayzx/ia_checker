@@ -141,44 +141,43 @@ class Board:
                     
         return moves
 
+    
     def get_capture_moves(self, row, col):
         piece = self.board[row][col]
         if not piece:
             return []
-            
+
         captures = []
-        
-        if 'D' in piece:
-            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+        if 'D' in piece:  # Dame capture à distance (fixé)
             for dx, dy in directions:
-                for distance in range(1, 7):
-                    check_row, check_col = row + dx * distance, col + dy * distance
-                    if 0 <= check_row < 8 and 0 <= check_col < 8:
-                        if self.board[check_row][check_col]:
-                            if self.board[check_row][check_col][0] != piece[0]: 
-                                target_row, target_col = check_row + dx, col + dy * (distance + 1)
-                                if 0 <= target_row < 8 and 0 <= target_col < 8 and not self.board[target_row][target_col]:
-                                    captures.append((target_row, target_col))
-                            break 
-                    else:
-                        break
-        else:
-            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-            for dx, dy in directions:
-                if piece == 'B' and dx > 0:
-                    continue
-                if piece == 'N' and dx < 0:
-                    continue
-                    
-                mid_row, mid_col = row + dx, col + dy
-                if 0 <= mid_row < 8 and 0 <= mid_col < 8:
-                    mid_piece = self.board[mid_row][mid_col]
-                    if mid_piece and mid_piece[0] != piece[0]:  
-                        end_row, end_col = mid_row + dx, mid_col + dy
-                        if 0 <= end_row < 8 and 0 <= end_col < 8 and not self.board[end_row][end_col]:
-                            captures.append((end_row, end_col))
-                            
+                r, c = row + dx, col + dy
+                while 0 <= r < 8 and 0 <= c < 8:
+                    target = self.board[r][c]
+                    if target and target[0] != piece[0]:
+                        after_r, after_c = r + dx, c + dy
+                        if (0 <= after_r < 8 and 0 <= after_c < 8 and
+                            self.board[after_r][after_c] is None):
+                            captures.append((after_r, after_c))
+                        break  # on stoppe après la pièce ennemie
+                    elif target:
+                        break  # pièce alliée, on bloque
+                    r += dx
+                    c += dy
+        else:  # Pion capture
+            deltas = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+            for dx, dy in deltas:
+                enemy_r, enemy_c = row + dx, col + dy
+                land_r, land_c = row + 2*dx, col + 2*dy
+                if (0 <= enemy_r < 8 and 0 <= enemy_c < 8 and
+                    0 <= land_r < 8 and 0 <= land_c < 8):
+                    target = self.board[enemy_r][enemy_c]
+                    if target and target[0] != piece[0] and self.board[land_r][land_c] is None:
+                        captures.append((land_r, land_c))
+
         return captures
+
 
     def has_capture(self, player):
         for row in range(8):

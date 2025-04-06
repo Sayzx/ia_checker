@@ -141,16 +141,21 @@ class Game:
         if not self.game_over:
             self.game_over = True
             
+        # Détermination du gagnant
         if not self.board.has_valid_moves("N"):
             self.update_status_message("Partie terminée! Vous avez gagné!")
+            winner = "Joueur"
         elif not self.board.has_valid_moves("B"):
             self.update_status_message("Partie terminée! L'IA a gagné!")
+            winner = "IA"
         else:
             self.update_status_message("Partie terminée!")
-        print("Partie terminée!")
+            winner = "Inconnu"
+
+        self.stats.record_result(winner)
         self.stats.save_game()
-        print("Sauvegarde de la partie.")
         self.save_game_to_csv()
+
             
 
     def save_game_to_csv(self):
