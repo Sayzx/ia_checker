@@ -112,6 +112,7 @@ class Game:
             if success:
                 self.moves_history.append((self.selected_piece, (row, col)))
                 self.stats.record_move("B", f"{self.selected_piece}->{(row, col)}")
+                print(f"Le joueur joue : {self.selected_piece} -> {(row, col)}")
 
                 self.gui.draw_board()
                 self.gui.update_capture_count(self.board.captured_black, self.board.captured_white)
@@ -141,21 +142,16 @@ class Game:
         if not self.game_over:
             self.game_over = True
             
-        # Détermination du gagnant
         if not self.board.has_valid_moves("N"):
             self.update_status_message("Partie terminée! Vous avez gagné!")
-            winner = "Joueur"
         elif not self.board.has_valid_moves("B"):
             self.update_status_message("Partie terminée! L'IA a gagné!")
-            winner = "IA"
         else:
             self.update_status_message("Partie terminée!")
-            winner = "Inconnu"
-
-        self.stats.record_result(winner)
+        print("Partie terminée!")
         self.stats.save_game()
+        print("Sauvegarde de la partie.")
         self.save_game_to_csv()
-
             
 
     def save_game_to_csv(self):

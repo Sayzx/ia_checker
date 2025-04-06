@@ -81,11 +81,12 @@ class GUI:
             fill=color, outline=outline_color, width=2
         )
         
-        self.canvas.create_text(
-            x_center, y_center,
-            text="♛", font=("Arial", 24),
-            fill="gold" if piece[0] == 'N' else "yellow"
-        )
+        if "D" in piece:
+            self.canvas.create_text(
+                x_center, y_center,
+                text="♛", font=("Arial", 24),
+                fill="gold" if piece[0] == 'N' else "yellow"
+            )
 
     def highlight_possible_moves(self, row, col):
         valid_moves = self.board.get_valid_moves(row, col)

@@ -85,8 +85,20 @@ class Board:
                     if self.board[check_x][check_y]:
                         if self.board[check_x][check_y][0] == piece[0]:  # Obstacle de même couleur
                             return False
-                return True
+
+        # Vérification stricte pour les pions normaux
+        if 'D' not in piece:
+            if dx == dy == 1:
+                if (piece == 'B' and x2 < x1) or (piece == 'N' and x2 > x1):
+                    return True
+            if dx == dy == 2:
+                mid_row, mid_col = (x1 + x2) // 2, (y1 + y2) // 2
+                mid_piece = self.board[mid_row][mid_col]
+                if mid_piece and mid_piece[0] != piece[0]:
+                    if (piece == 'B' and x2 < x1) or (piece == 'N' and x2 > x1):
+                        return True
             return False
+
 
         else:  # Pion normal
             if dx == dy == 1:  # Déplacement simple
@@ -99,49 +111,48 @@ class Board:
 
         return False
 
-
     def get_valid_moves(self, row, col):
         piece = self.board[row][col]
         if not piece:
             return []
-            
+
         # Si un pion est forcé de capturer, limiter les mouvements à ce pion
         if self.mandatory_jump_piece and (row, col) != self.mandatory_jump_piece:
             return []
-            
+
         moves = []
         capture_moves = self.get_capture_moves(row, col)
-        
+
         if capture_moves:
             return capture_moves  # Priorité aux captures
-        
-        # Si aucune capture n'est obligatoire, calcule les mouvements normaux
+
+        # Mouvements simples
         if 'D' in piece:  # Dame
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
             for dx, dy in directions:
                 for distance in range(1, 8):
                     new_row, new_col = row + dx * distance, col + dy * distance
                     if 0 <= new_row < 8 and 0 <= new_col < 8:
-                        if not self.board[new_row][new_col]: 
+                        if not self.board[new_row][new_col]:
                             moves.append((new_row, new_col))
                         else:
-                            if self.board[new_row][new_col][0] != piece[0]:  # Pièce ennemie
-                                target_row, target_col = new_row + dx, new_col + dy
-                                if 0 <= target_row < 8 and 0 <= target_col < 8 and not self.board[target_row][target_col]:
-                                    moves.append((target_row, target_col))
                             break
-                    else:
-                        break
-        else:  # Pion normal
-            directions = [(-1, -1), (-1, 1)] if piece == 'B' else [(1, -1), (1, 1)]
+        else:  # Pions : ne peuvent aller que dans une seule direction
+            if piece == 'B':
+                directions = [(-1, -1), (-1, 1)]  # Vers le haut
+            elif piece == 'N':
+                directions = [(1, -1), (1, 1)]  # Vers le bas
+            else:
+                directions = []
+
             for dx, dy in directions:
                 new_row, new_col = row + dx, col + dy
-                if 0 <= new_row < 8 and 0 <= new_col < 8 and not self.board[new_row][new_col]:
+                if 0 <= new_row < 8 and 0 <= new_col < 8 and self.board[new_row][new_col] is None:
                     moves.append((new_row, new_col))
-                    
+
+        moves = [move for move in moves if self.is_valid_move((row, col), move)]
         return moves
 
-    
     def get_capture_moves(self, row, col):
         piece = self.board[row][col]
         if not piece:
