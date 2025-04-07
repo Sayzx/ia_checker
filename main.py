@@ -1,7 +1,8 @@
 from tkinter import Tk, Button
 from game import Game
 from stats import GameStats
-from replay import GameReplay
+from replay_visual import replay_game_visual
+
 
 def start_game():
     game_root = Tk()
@@ -14,7 +15,7 @@ def show_menu():
 
     Button(root, text="Jouer", command=lambda: [root.destroy(), start_game()]).pack(pady=10)
     Button(root, text="Voir les stats", command=lambda: GameStats().show_stats()).pack(pady=10)
-    Button(root, text="Rejouer", command=lambda: GameReplay().replay_last_game()).pack(pady=10)
+    Button(root, text="Rejouer", command=lambda: [root.destroy(), replay_game_visual()]).pack(pady=10)
     Button(root, text="Quitter", command=root.quit).pack(pady=10)
 
     root.mainloop()

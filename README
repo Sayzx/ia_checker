@@ -1,4 +1,4 @@
 ce qu'il faut fix 
 
-> Le fait que les replay game marche pas 
-> le fait que on puisse faire des coup pas logique comme passer de (2, 5) a (4, 7) en gros faire des retours arriere quandtu est pas une dammes
+> Fix l'empechement du deplacement en arriere a cause de la previw de la peice
+> Ajouter surbrillance pour la piece selectionnee et l'enlever quand on la deselectionne et ou la deplace

@@ -31,7 +31,6 @@ class Game:
         return self.ai.get_best_move(self.board)
     
     def ai_turn(self):
-        """Fait jouer l'IA"""
         if self.current_player != "N":  
             return
 
@@ -101,7 +100,7 @@ class Game:
         if self.selected_piece:
             start_row, start_col = self.selected_piece
 
-            if (row, col) == (start_row, start_col):  # Change
+            if (row, col) == (start_row, start_col):
                 self.selected_piece = None
                 self.gui.draw_board()
                 self.update_status_message("Pièce désélectionnée.")
@@ -157,13 +156,13 @@ class Game:
     def save_game_to_csv(self):
         game_data = []
 
-        # Construction des données des mouvements
+        game_data.append({"Turn": "---debut-partie---", "Player": "", "Start": "", "End": "", "Captured Piece": ""})
+
         for i, move in enumerate(self.moves_history):
             start, end = move
             player = "B" if i % 2 == 0 else "N"
             captured_piece = None
 
-            # Vérification de la prise d'une pièce (si saut)
             if abs(start[0] - end[0]) > 1:
                 mid_row = (start[0] + end[0]) // 2
                 mid_col = (start[1] + end[1]) // 2
@@ -177,7 +176,6 @@ class Game:
                 "Captured Piece": str(captured_piece)
             })
 
-        # Détermination du gagnant
         winner = "IA" if not self.board.has_valid_moves("B") else "Joueur"
 
         game_data.append({
@@ -188,21 +186,18 @@ class Game:
             "Captured Piece": winner
         })
 
+        game_data.append({"Turn": "---fin-partie---", "Player": "", "Start": "", "End": "", "Captured Piece": ""})
+
         df = pd.DataFrame(game_data)
 
-        # Création du dossier "data" s'il n'existe pas
         os.makedirs("data", exist_ok=True)
-
         csv_path = "data/game_history.csv"
 
         try:
-            # Vérifier si le fichier CSV existe
             if os.path.exists(csv_path):
-                # Ajouter les nouvelles données sans l'en-tête
                 df.to_csv(csv_path, mode='a', header=False, index=False)
                 print("Données ajoutées au fichier CSV existant.")
             else:
-                # Créer un nouveau fichier avec l'en-tête
                 df.to_csv(csv_path, index=False)
                 print("Nouveau fichier CSV créé.")
 

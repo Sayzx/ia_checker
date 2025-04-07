@@ -28,31 +28,30 @@ class GameStats:
 
     def show_stats(self):
         df_moves, df_results = None, None
-
-        # Lire les fichiers
+        
         if os.path.exists(self.move_file):
             try:
                 df_moves = pd.read_csv(self.move_file)
             except Exception as e:
                 print("❌ Erreur lecture coups (.csv):", e)
-
+        
         if os.path.exists(self.result_file):
             try:
                 df_results = pd.read_csv(self.result_file)
             except Exception as e:
                 print("❌ Erreur lecture résultats (.csv):", e)
-
+        
         if df_moves is None and df_results is None:
             print("Aucune donnée disponible pour afficher les statistiques.")
             return
-
+        
         # Auto-rename des colonnes si elles ne sont pas bonnes
         if df_moves is not None:
             cols = [col.lower() for col in df_moves.columns]
             df_moves.columns = cols
             if "move" not in cols and "start" in cols and "end" in cols:
                 df_moves["move"] = df_moves["start"].astype(str) + " → " + df_moves["end"].astype(str)
-
+        
         if df_results is not None:
             cols = [col.lower() for col in df_results.columns]
             df_results.columns = cols
@@ -60,10 +59,10 @@ class GameStats:
                 df_results.rename(columns={"joueur": "player"}, inplace=True)
             if "result" not in cols and "résultat" in cols:
                 df_results.rename(columns={"résultat": "result"}, inplace=True)
-
+        
         # Graphiques
         fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-
+        
         # Coups les plus joués
         if df_moves is not None and "move" in df_moves.columns:
             move_counts = df_moves["move"].value_counts().head(10)
@@ -72,18 +71,23 @@ class GameStats:
             axs[1].invert_yaxis()
         else:
             axs[1].text(0.5, 0.5, "Aucun coup disponible", ha="center")
-
-        # Victoires (à la fin de la partie)
-        if df_moves is not None and "player" in df_moves.columns and "result" in df_moves.columns:
-            filtered = df_moves[df_moves["result"].notnull()]
-            filtered = filtered[filtered["player"].isin(["Joueur", "IA"])]
-            win_counts = filtered.groupby("player")["result"].count()
-            win_counts.plot(kind="bar", ax=axs[0], title="Victoires par joueur")
-            axs[0].set_ylabel("Nombre de victoires")
-            axs[0].set_xlabel("Joueur")
+        
+        # Victoires
+        # Compter les occurrences des résultats dans le fichier game_history.csv
+        if df_results is not None:
+            # Extraire les lignes qui contiennent "Résultat" ou résultat dans la colonne 'turn'
+            result_rows = df_results[df_results['turn'].str.contains('Résultat', case=False, na=False)]
+            
+            if not result_rows.empty:
+                # Prendre la dernière colonne qui contient soit 'Joueur' soit 'IA'
+                winners = result_rows.iloc[:, -1].value_counts()
+                winners.plot(kind="bar", ax=axs[0], title="Victoires par joueur")
+                axs[0].set_ylabel("Nombre de victoires")
+                axs[0].set_xlabel("Joueur")
+            else:
+                axs[0].text(0.5, 0.5, "Aucune victoire enregistrée", ha="center")
         else:
             axs[0].text(0.5, 0.5, "Aucune victoire enregistrée", ha="center")
-
-
+        
         plt.tight_layout()
         plt.show()
