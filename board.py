@@ -16,6 +16,17 @@ class Board:
                 if (row + col) % 2 == 1:
                     board[row][col] = 'B'
         return board
+    
+    def has_any_capture(self, player_color):
+        for row in range(8):
+            for col in range(8):
+                piece = self.board[row][col]
+                if piece and piece[0] == player_color:
+                    moves = self.get_valid_moves(row, col)
+                    for move_row, move_col in moves:
+                        if abs(move_row - row) == 2 or "D" in piece:  # pion saute ou dame capture
+                            return True
+        return False
 
     def move_piece(self, start, end):
         start_row, start_col = start
@@ -99,108 +110,22 @@ class Board:
 
         else:
             if dx == dy == 1:
-                if (piece == 'B' and x2 < x1) or (piece == 'N' and x2 > x1):
+                if (piece.startswith('B') and x2 < x1) or (piece.startswith('N') and x2 > x1):
                     return True
             if dx == dy == 2:
                 mid_row, mid_col = (x1 + x2) // 2, (y1 + y2) // 2
                 mid_piece = self.board[mid_row][mid_col]
                 if mid_piece and mid_piece[0] != piece[0]:
-                    if (piece == 'B' and x2 < x1) or (piece == 'N' and x2 > x1):
+                    if piece.startswith('B') and x2 < x1:
+                        return True
+                    if piece.startswith('N') and x2 > x1:
                         return True
             return False
+
 
     def is_capture_move(self, start, end):
         return abs(start[0] - end[0]) > 1 and abs(start[1] - end[1]) > 1
 
-        piece = self.board[row][col]
-        if not piece:
-            return []
-
-        if self.mandatory_jump_piece and (row, col) != self.mandatory_jump_piece:
-            return []
-
-        capture_moves = self.get_capture_moves(row, col)
-        if capture_moves:
-            return capture_moves
-
-        moves = []
-        directions = []
-
-        if 'D' in piece:
-            # Une dame peut aller dans toutes les directions
-            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-            for dx, dy in directions:
-                for dist in range(1, 8):
-                    new_row = row + dx * dist
-                    new_col = col + dy * dist
-                    if 0 <= new_row < 8 and 0 <= new_col < 8:
-                        if not self.board[new_row][new_col]:
-                            if self.is_valid_move((row, col), (new_row, new_col)):
-                                moves.append((new_row, new_col))
-                        else:
-                            break
-        else:
-            # Pion normal
-            if piece == 'B':
-                directions = [(-1, -1), (-1, 1)]
-            elif piece == 'N':
-                directions = [(1, -1), (1, 1)]
-
-            for dx, dy in directions:
-                new_row = row + dx
-                new_col = col + dy
-                if 0 <= new_row < 8 and 0 <= new_col < 8:
-                    if self.board[new_row][new_col] is None:
-                        if self.is_valid_move((row, col), (new_row, new_col)):
-                            moves.append((new_row, new_col))
-            # Ajout possible des captures simples diagonales (2 cases)
-            for dx, dy in directions:
-                new_row = row + 2 * dx
-                new_col = col + 2 * dy
-                if 0 <= new_row < 8 and 0 <= new_col < 8:
-                    if self.board[new_row][new_col] is None:
-                        if self.is_valid_move((row, col), (new_row, new_col)):
-                            moves.append((new_row, new_col))
-                return moves
-
-            piece = self.board[row][col]
-            if not piece:
-                return []
-
-            if self.mandatory_jump_piece and (row, col) != self.mandatory_jump_piece:
-                return []
-
-            moves = []
-            capture_moves = self.get_capture_moves(row, col)
-
-            if capture_moves:
-                return capture_moves
-
-            if 'D' in piece:
-                directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-                for dx, dy in directions:
-                    for distance in range(1, 8):
-                        new_row, new_col = row + dx * distance, col + dy * distance
-                        if 0 <= new_row < 8 and 0 <= new_col < 8:
-                            if not self.board[new_row][new_col]:
-                                moves.append((new_row, new_col))
-                            else:
-                                break
-            else:
-                if piece == 'B':
-                    directions = [(-1, -1), (-1, 1)]
-                elif piece == 'N':
-                    directions = [(1, -1), (1, 1)]
-                else:
-                    directions = []
-
-                for dx, dy in directions:
-                    new_row, new_col = row + dx, col + dy
-                    if 0 <= new_row < 8 and 0 <= new_col < 8 and self.board[new_row][new_col] is None:
-                        moves.append((new_row, new_col))
-
-            moves = [move for move in moves if self.is_valid_move((row, col), move)]
-            return moves
 
     def get_capture_moves(self, row, col):
         piece = self.board[row][col]
@@ -230,7 +155,11 @@ class Board:
                 if 0 <= enemy_r < 8 and 0 <= enemy_c < 8 and 0 <= land_r < 8 and 0 <= land_c < 8:
                     target = self.board[enemy_r][enemy_c]
                     if target and target[0] != piece[0] and self.board[land_r][land_c] is None:
-                        captures.append((land_r, land_c))
+                        if piece == 'B' and dx == -1:
+                            captures.append((land_r, land_c))
+                        elif piece == 'N' and dx == 1:
+                            captures.append((land_r, land_c))
+
 
         return captures
 
@@ -260,29 +189,33 @@ class Board:
 
         player = piece[0]
 
-        # Si une capture est obligatoire, seules les pièces qui peuvent capturer peuvent jouer
         if self.mandatory_jump_piece and (row, col) != self.mandatory_jump_piece:
             return []
 
-        if self.has_capture(player):
-            return self.get_capture_moves(row, col)
+        capture_moves = self.get_capture_moves(row, col)
+        if capture_moves:
+            return capture_moves
 
         moves = []
-        directions = []
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
         if 'D' in piece:
-            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+            # Dame : déplacement libre en diagonale tant qu'aucune pièce n'est rencontrée
             for dx, dy in directions:
                 for dist in range(1, 8):
                     new_row = row + dx * dist
                     new_col = col + dy * dist
                     if 0 <= new_row < 8 and 0 <= new_col < 8:
-                        if not self.board[new_row][new_col]:
-                            if self.is_valid_move((row, col), (new_row, new_col)):
+                        if self.board[new_row][new_col] is None:
+                            # Vérifie si une capture est possible ailleurs : interdiction des déplacements simples
+                            if not self.has_capture(player):
                                 moves.append((new_row, new_col))
                         else:
                             break
+                    else:
+                        break
         else:
+            # Pion simple
             if piece == 'B':
                 directions = [(-1, -1), (-1, 1)]
             elif piece == 'N':
@@ -293,16 +226,19 @@ class Board:
                 new_col = col + dy
                 if 0 <= new_row < 8 and 0 <= new_col < 8:
                     if self.board[new_row][new_col] is None:
-                        if self.is_valid_move((row, col), (new_row, new_col)):
+                        if not self.has_capture(player):
                             moves.append((new_row, new_col))
 
-            for dx, dy in directions:
+                # Test de capture diagonale
                 new_row = row + 2 * dx
                 new_col = col + 2 * dy
                 if 0 <= new_row < 8 and 0 <= new_col < 8:
-                    if self.board[new_row][new_col] is None:
-                        if self.is_valid_move((row, col), (new_row, new_col)):
-                            moves.append((new_row, new_col))
+                    mid_row = row + dx
+                    mid_col = col + dy
+                    mid_piece = self.board[mid_row][mid_col]
+                    if mid_piece and mid_piece[0] != player and self.board[new_row][new_col] is None:
+                        moves.append((new_row, new_col))
 
         return moves
+
 

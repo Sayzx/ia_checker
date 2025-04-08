@@ -73,13 +73,10 @@ class GameStats:
             axs[1].text(0.5, 0.5, "Aucun coup disponible", ha="center")
         
         # Victoires
-        # Compter les occurrences des résultats dans le fichier game_history.csv
         if df_results is not None:
-            # Extraire les lignes qui contiennent "Résultat" ou résultat dans la colonne 'turn'
             result_rows = df_results[df_results['turn'].str.contains('Résultat', case=False, na=False)]
             
             if not result_rows.empty:
-                # Prendre la dernière colonne qui contient soit 'Joueur' soit 'IA'
                 winners = result_rows.iloc[:, -1].value_counts()
                 winners.plot(kind="bar", ax=axs[0], title="Victoires par joueur")
                 axs[0].set_ylabel("Nombre de victoires")

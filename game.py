@@ -45,6 +45,8 @@ class Game:
 
         start, end = best_move
         print(f"L'IA joue : {start} -> {end}")
+        self.gui.append_history(f"L'IA joue : {start} -> {end}")
+
 
         success, multiple_capture = self.move_piece(start, end)
 
@@ -99,6 +101,7 @@ class Game:
 
         if self.selected_piece:
             start_row, start_col = self.selected_piece
+            
 
             if (row, col) == (start_row, start_col):
                 self.selected_piece = None
@@ -112,14 +115,32 @@ class Game:
                 self.moves_history.append((self.selected_piece, (row, col)))
                 self.stats.record_move("B", f"{self.selected_piece}->{(row, col)}")
                 print(f"Le joueur joue : {self.selected_piece} -> {(row, col)}")
+                self.gui.append_history(f"Le joueur joue : {self.selected_piece} -> {(row, col)}")
 
                 self.gui.draw_board()
                 self.gui.update_capture_count(self.board.captured_black, self.board.captured_white)
 
                 if multiple_capture:
                     self.selected_piece = (row, col)
-                    self.gui.highlight_possible_moves(row, col) 
-                    self.update_status_message("Capture multiple possible!")
+
+                    # Vérifie s'il reste des captures à faire depuis la nouvelle position
+                    valid_moves = self.board.get_valid_moves(row, col)
+                    has_additional_capture = False
+
+                    for move_row, move_col in valid_moves:
+                        # On vérifie que c'est une capture (différence de 2 cases en diagonale)
+                        if abs(move_row - row) == 2 and abs(move_col - col) == 2:
+                            has_additional_capture = True
+                            break
+
+                    if has_additional_capture:
+                        self.gui.highlight_possible_moves(row, col)
+                        self.update_status_message("Capture multiple possible!")
+                    else:
+                        self.selected_piece = None
+                        self.update_status_message("Au tour de l'IA...")
+                        self.gui.root.after(500, self.ai_turn)
+
                 else:
                     self.selected_piece = None
                     self.update_status_message("Au tour de l'IA...")
@@ -135,7 +156,9 @@ class Game:
                 return
 
             self.select_piece(row, col)
-            self.update_status_message("Cliquez sur une case verte pour vous déplacer.")
+            # mettre cette piece en jaune 
+            self.gui.highlight_selected_piece(row, col) 
+            self.update_status_message("Clique sur un rond vert")
 
     def end_game(self):
         if not self.game_over:
@@ -156,7 +179,22 @@ class Game:
     def save_game_to_csv(self):
         game_data = []
 
-        game_data.append({"Turn": "---debut-partie---", "Player": "", "Start": "", "End": "", "Captured Piece": ""})
+        os.makedirs("data", exist_ok=True)
+        csv_path = "data/game_history.csv"
+
+        game_id = 1
+        if os.path.exists(csv_path):
+            try:
+                with open(csv_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                    game_id = sum(1 for line in lines if line.strip().startswith("---debut-partie")) + 1
+            except Exception as e:
+                print(f"Erreur lors de la lecture brute du fichier : {e}")
+
+        game_data.append({
+            "Turn": f"---debut-partie{game_id}---",
+            "Player": "", "Start": "", "End": "", "Captured Piece": ""
+        })
 
         for i, move in enumerate(self.moves_history):
             start, end = move
@@ -186,20 +224,22 @@ class Game:
             "Captured Piece": winner
         })
 
-        game_data.append({"Turn": "---fin-partie---", "Player": "", "Start": "", "End": "", "Captured Piece": ""})
+        game_data.append({
+            "Turn": f"---fin-partie{game_id}---",
+            "Player": "", "Start": "", "End": "", "Captured Piece": ""
+        })
 
         df = pd.DataFrame(game_data)
-
-        os.makedirs("data", exist_ok=True)
-        csv_path = "data/game_history.csv"
 
         try:
             if os.path.exists(csv_path):
                 df.to_csv(csv_path, mode='a', header=False, index=False)
-                print("Données ajoutées au fichier CSV existant.")
+                print(f"Données ajoutées (partie {game_id}).")
             else:
                 df.to_csv(csv_path, index=False)
-                print("Nouveau fichier CSV créé.")
-
+                print(f"Nouveau fichier créé (partie {game_id}).")
         except Exception as e:
-            print(f"Erreur lors de la sauvegarde du fichier CSV : {e}")
+            print(f"Erreur lors de la sauvegarde du CSV : {e}")
+
+
+            

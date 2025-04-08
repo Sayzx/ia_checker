@@ -1,4 +1,3 @@
-
 import tkinter as tk
 import pandas as pd
 import ast
@@ -14,19 +13,37 @@ class ReplayGameWrapper:
         self.gui = GUI(root, self)
         self.current_index = 0
         self.game_over = False
+        self.replay_speed = 1000  # Default speed in ms
 
-        self.create_controls()
+        self.add_replay_controls()
         self.update_status("Cliquez sur ▶️ pour rejouer la partie.")
 
-    def create_controls(self):
-        control_frame = tk.Frame(self.root)
-        control_frame.pack(pady=5)
+    def add_replay_controls(self):
+        # Frame flottante en haut à droite
+        control_frame = tk.Frame(self.root, bg="#2b2b2b")
+        control_frame.place(relx=0.99, rely=0.01, anchor="ne")
 
-        self.next_button = tk.Button(control_frame, text="▶️ Coup Suivant", command=self.replay_next_move)
-        self.next_button.pack(side=tk.LEFT, padx=5)
+        button_style = {
+            "font": ("Helvetica", 12), "bg": "#444", "fg": "white",
+            "activebackground": "#666", "padx": 10, "pady": 5, "bd": 0, "relief": tk.FLAT
+        }
 
-        self.auto_button = tk.Button(control_frame, text="⏩ Lecture Auto", command=self.start_auto_replay)
-        self.auto_button.pack(side=tk.LEFT, padx=5)
+        self.next_button = tk.Button(control_frame, text="▶️ Coup Suivant", command=self.replay_next_move, **button_style)
+        self.next_button.pack(side=tk.TOP, pady=2)
+
+        self.auto_button = tk.Button(control_frame, text="⏩ Lecture Auto", command=self.start_auto_replay, **button_style)
+        self.auto_button.pack(side=tk.TOP, pady=2)
+
+        # Vitesse
+        tk.Label(control_frame, text="Vitesse", fg="white", bg="#2b2b2b", font=("Helvetica", 10)).pack(pady=(10, 0))
+        self.speed_scale = tk.Scale(control_frame, from_=200, to=2000, resolution=100, orient=tk.HORIZONTAL,
+                                    bg="#2b2b2b", fg="white", troughcolor="#555", highlightthickness=0,
+                                    length=150, command=self.set_speed)
+        self.speed_scale.set(self.replay_speed)
+        self.speed_scale.pack()
+
+    def set_speed(self, val):
+        self.replay_speed = int(val)
 
     def update_status(self, message):
         self.gui.update_status(message)
@@ -51,13 +68,16 @@ class ReplayGameWrapper:
         else:
             self.gui.draw_board()
             self.gui.update_status(f"{player} : {start} → {end}")
+            if hasattr(self.gui, 'append_history'):
+                label = "Le joueur joue" if player == 'B' else "L'IA joue"
+                self.gui.append_history(f"{label} : {start} -> {end}")
 
         self.current_index += 1
 
     def start_auto_replay(self):
         if self.current_index < len(self.moves):
             self.replay_next_move()
-            self.root.after(1000, self.start_auto_replay)
+            self.root.after(self.replay_speed, self.start_auto_replay)
         else:
             self.update_status("🎉 Relecture automatique terminée !")
 
@@ -74,7 +94,8 @@ def replay_game_visual(csv_file="data/game_history.csv"):
         end_index = result_indexes[-1]
 
         df = df.iloc[start_index:end_index]
-        df = df[df["Player"].isin(["B", "N"])].reset_index(drop=True)
+        df = df[df["Player"].isin(["B", "N"])]
+        df = df.reset_index(drop=True)
 
         if df.empty:
             print("Aucune partie récente trouvée.")
@@ -82,6 +103,7 @@ def replay_game_visual(csv_file="data/game_history.csv"):
 
         root = tk.Tk()
         root.title("Rejouer une partie")
+        root.attributes('-fullscreen', True)
         app = ReplayGameWrapper(root, df)
         root.mainloop()
 
