@@ -1,5 +1,6 @@
 import tkinter as tk
 from game import Game
+from ia import CheckersAI
 
 class IAVersus:
     def __init__(self, root, speed_ms=500):
@@ -9,7 +10,8 @@ class IAVersus:
 
         self.speed_ms = speed_ms
         self.game = Game(root)
-        self.game.current_player = "B"  # Commence par l'IA blanche
+        self.game.current_player = "B"  # Commence par IA blanche
+        self.ai = CheckersAI()  # Utilisation directe
 
         self.add_controls()
         self.start_loop()
@@ -40,27 +42,29 @@ class IAVersus:
             self.game.end_game()
             return
 
-        if not self.game.board.has_valid_moves(self.game.current_player):
-            self.game.update_status_message(f"IA {self.game.current_player} ne peut plus jouer.")
+        player = self.game.current_player
+
+        if not self.game.board.has_valid_moves(player):
+            self.game.update_status_message(f"IA {player} ne peut plus jouer.")
             self.game.end_game()
             return
 
-        self.game.update_status_message(f"IA {self.game.current_player} réfléchit...")
+        self.game.update_status_message(f"IA {player} réfléchit...")
         self.root.update()
 
-        move = self.game.get_ai_move()
+        move = self.ai.get_best_move(self.game.board, player=player)
         if not move:
             self.game.end_game()
             return
 
         start, end = move
-        print(f"IA {self.game.current_player} joue : {start} -> {end}")
-        self.game.gui.append_history(f"IA {self.game.current_player} joue : {start} -> {end}")
+        print(f"IA {player} joue : {start} -> {end}")
+        self.game.gui.append_history(f"IA {player} joue : {start} -> {end}")
 
         success, multiple_capture = self.game.move_piece(start, end)
         if success:
             self.game.moves_history.append((start, end))
-            self.game.stats.record_move(self.game.current_player, f"{start}->{end}")
+            self.game.stats.record_move(player, f"{start}->{end}")
             self.game.gui.draw_board()
             self.game.gui.update_capture_count(self.game.board.captured_black, self.game.board.captured_white)
 
@@ -68,7 +72,7 @@ class IAVersus:
                 self.root.after(self.speed_ms, self.start_loop)
                 return
 
-            self.game.current_player = "B" if self.game.current_player == "N" else "N"
+            self.game.current_player = "B" if player == "N" else "N"
             self.root.after(self.speed_ms, self.start_loop)
         else:
             self.game.end_game()

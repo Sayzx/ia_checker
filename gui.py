@@ -3,9 +3,10 @@ from tkinter import messagebox
 from board import Board
 
 class GUI:
-    def __init__(self, root, game):
+    def __init__(self, root, game, restart_callback=None):
         self.game = game
         self.root = root
+        self.restart_callback = restart_callback
         self.root.title("Jeu de Dames")
         self.root.attributes('-fullscreen', True)
 
@@ -145,16 +146,9 @@ class GUI:
 
     def new_game(self):
         if messagebox.askyesno("Nouvelle partie", "Voulez-vous vraiment recommencer ?"):
-            self.game.board = Board()
-            self.game.current_player = "B"
-            self.game.selected_piece = None
-            self.game.moves_history = []
-            self.game.game_over = False
-            self.history_text.config(state=tk.NORMAL)
-            self.history_text.delete(1.0, tk.END)
-            self.history_text.config(state=tk.DISABLED)
-            self.game.setup_new_game()
-            self.draw_board()
+            if self.restart_callback:
+                self.root.destroy()
+                self.restart_callback()
 
     def resign_game(self):
         if not self.game.game_over:

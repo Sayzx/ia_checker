@@ -20,13 +20,13 @@ class CheckersAI:
 
         return {}
 
-    def get_best_move(self, board):
-        """Choisit un coup valide en s’inspirant des coups les plus joués"""
+    def get_best_move(self, board, player="N"):
         valid_moves = []
 
         for row in range(8):
             for col in range(8):
-                if board.board[row][col] == 'N' or board.board[row][col] == 'ND':
+                piece = board.board[row][col]
+                if piece and piece[0] == player:
                     moves = board.get_valid_moves(row, col)
                     for move in moves:
                         valid_moves.append(((row, col), move))
@@ -34,16 +34,12 @@ class CheckersAI:
         if not valid_moves:
             return None
 
-        # Système de score basé sur les stats
         scored_moves = []
         for start, end in valid_moves:
             move_str = f"{start}->{end}"
             score = self.popular_moves.get(move_str, 0)
             scored_moves.append(((start, end), score))
 
-        # Trier les coups par score descendant
         scored_moves.sort(key=lambda x: -x[1])
-
-        # Sélection du meilleur ou tirage parmi top 3
         top_moves = scored_moves[:3] if len(scored_moves) >= 3 else scored_moves
         return random.choice([move for move, score in top_moves])
