@@ -3,22 +3,67 @@ import pandas as pd
 import os
 
 class CheckersAI:
-    def __init__(self, stats_file="data/games_stats.csv"):
-        self.stats_file = stats_file
-        self.popular_moves = self.load_move_stats()
+    def __init__(self, history_file="data/game_history.csv"):
+        self.history_file = history_file
+        self.move_scores = self.analyze_history()
 
-    def load_move_stats(self):
-        if not os.path.exists(self.stats_file):
+    def analyze_history(self):
+        if not os.path.exists(self.history_file):
             return {}
 
         try:
-            df = pd.read_csv(self.stats_file)
-            if "move" in df.columns:
-                return df["move"].value_counts().to_dict()
-        except:
-            pass
+            df = pd.read_csv(self.history_file, encoding='utf-8-sig') 
+        except Exception as e:
+            print(f"❌ Erreur de lecture du fichier CSV : {e}")
+            return {}
 
-        return {}
+        df.columns = df.columns.str.strip().str.lower()
+        print("✅ Colonnes détectées :", df.columns.tolist()) 
+
+        expected = {"turn", "start", "end", "player", "captured piece"}
+        actual = set(df.columns)
+
+        if not expected.issubset(actual):
+            print("❌ Colonnes manquantes dans game_history.csv")
+            print("Il manque :", expected - actual)
+            return {}
+
+        move_results = {}
+        current_winner = None
+
+        for _, row in df.iterrows():
+            turn = row["turn"]
+
+            if isinstance(turn, str) and turn.startswith("---debut-partie"):
+                current_winner = None
+
+            elif isinstance(turn, str) and "résultat" in turn.lower():
+                current_winner = str(row["captured piece"]).strip()
+
+            elif str(turn).isdigit():
+                start = row["start"]
+                end = row["end"]
+                player = row["player"]
+                move_key = f"{start}->{end}"
+
+                if current_winner and player in ["B", "N"]:
+                    win = (
+                        1 if player == "N" and current_winner == "IA" else
+                        1 if player == "B" and current_winner == "Joueur" else
+                        0
+                    )
+
+                    if move_key not in move_results:
+                        move_results[move_key] = [0, 0]
+
+                    move_results[move_key][0] += win
+                    move_results[move_key][1] += 1
+
+        scored = {}
+        for move, (wins, total) in move_results.items():
+            scored[move] = wins / total if total > 0 else 0
+
+        return scored
 
     def get_best_move(self, board, player="N"):
         valid_moves = []
@@ -37,7 +82,7 @@ class CheckersAI:
         scored_moves = []
         for start, end in valid_moves:
             move_str = f"{start}->{end}"
-            score = self.popular_moves.get(move_str, 0)
+            score = self.move_scores.get(move_str, 0.5) 
             scored_moves.append(((start, end), score))
 
         scored_moves.sort(key=lambda x: -x[1])

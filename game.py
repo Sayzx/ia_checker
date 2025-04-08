@@ -171,7 +171,6 @@ class Game:
         else:
             self.update_status_message("Partie terminée!")
         print("Partie terminée!")
-        self.stats.save_game()
         print("Sauvegarde de la partie.")
         self.save_game_to_csv()
             

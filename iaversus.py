@@ -26,7 +26,7 @@ class IAVersus:
         }
 
         tk.Label(control_frame, text="Vitesse", fg="white", bg="#2b2b2b", font=("Helvetica", 10)).pack(pady=(10, 0))
-        self.speed_scale = tk.Scale(control_frame, from_=100, to=2000, resolution=100, orient=tk.HORIZONTAL,
+        self.speed_scale = tk.Scale(control_frame, from_=75, to=2000, resolution=100, orient=tk.HORIZONTAL,
                                     bg="#2b2b2b", fg="white", troughcolor="#555", highlightthickness=0,
                                     length=150, command=self.set_speed)
         self.speed_scale.set(self.speed_ms)

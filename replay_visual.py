@@ -13,13 +13,12 @@ class ReplayGameWrapper:
         self.gui = GUI(root, self)
         self.current_index = 0
         self.game_over = False
-        self.replay_speed = 1000  # Default speed in ms
+        self.replay_speed = 1000
 
         self.add_replay_controls()
         self.update_status("Cliquez sur ▶️ pour rejouer la partie.")
 
     def add_replay_controls(self):
-        # Frame flottante en haut à droite
         control_frame = tk.Frame(self.root, bg="#2b2b2b")
         control_frame.place(relx=0.99, rely=0.01, anchor="ne")
 
@@ -34,7 +33,6 @@ class ReplayGameWrapper:
         self.auto_button = tk.Button(control_frame, text="⏩ Lecture Auto", command=self.start_auto_replay, **button_style)
         self.auto_button.pack(side=tk.TOP, pady=2)
 
-        # Vitesse
         tk.Label(control_frame, text="Vitesse", fg="white", bg="#2b2b2b", font=("Helvetica", 10)).pack(pady=(10, 0))
         self.speed_scale = tk.Scale(control_frame, from_=200, to=2000, resolution=100, orient=tk.HORIZONTAL,
                                     bg="#2b2b2b", fg="white", troughcolor="#555", highlightthickness=0,
@@ -55,9 +53,9 @@ class ReplayGameWrapper:
 
         move = self.moves.iloc[self.current_index]
         try:
-            start = ast.literal_eval(move["Start"])
-            end = ast.literal_eval(move["End"])
-            player = move["Player"]
+            start = ast.literal_eval(str(move["start"]))
+            end = ast.literal_eval(str(move["end"]))
+            player = move["player"]
         except Exception as e:
             self.update_status(f"⚠️ Erreur parsing du coup {self.current_index}: {e}")
             return
@@ -81,31 +79,46 @@ class ReplayGameWrapper:
         else:
             self.update_status("🎉 Relecture automatique terminée !")
 
-def replay_game_visual(csv_file="data/game_history.csv"):
+def select_game_to_replay(csv_file="data/game_history.csv"):
     try:
         df = pd.read_csv(csv_file)
+        df.columns = df.columns.str.strip().str.lower()
 
-        result_indexes = df[df["Turn"] == "Résultat"].index.tolist()
-        if not result_indexes:
-            print("Aucune fin de partie trouvée.")
+        start_indices = df[df["turn"].str.contains("---debut-partie", na=False)].index.tolist()
+        end_indices = df[df["turn"].str.contains("---fin-partie", na=False)].index.tolist()
+
+        if not start_indices or not end_indices:
+            print("Aucune partie trouvée.")
             return
 
-        start_index = result_indexes[-2] + 1 if len(result_indexes) >= 2 else 0
-        end_index = result_indexes[-1]
-
-        df = df.iloc[start_index:end_index]
-        df = df[df["Player"].isin(["B", "N"])]
-        df = df.reset_index(drop=True)
-
-        if df.empty:
-            print("Aucune partie récente trouvée.")
-            return
+        games = []
+        for i, (start, end) in enumerate(zip(start_indices, end_indices), 1):
+            game_data = df.iloc[start+1:end]  # skip start marker
+            games.append((i, game_data))
 
         root = tk.Tk()
-        root.title("Rejouer une partie")
-        root.attributes('-fullscreen', True)
-        app = ReplayGameWrapper(root, df)
+        root.title("Sélectionner une partie")
+        root.geometry("400x300")
+
+        tk.Label(root, text="Choisissez une partie à rejouer:", font=("Helvetica", 14)).pack(pady=10)
+        listbox = tk.Listbox(root, font=("Courier", 12))
+        listbox.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+
+        for i in range(len(games)):
+            listbox.insert(tk.END, f"Partie {i+1}")
+
+        def launch_replay():
+            selection = listbox.curselection()
+            if selection:
+                game_index = selection[0]
+                root.destroy()
+                replay_root = tk.Tk()
+                replay_root.attributes('-fullscreen', True)
+                ReplayGameWrapper(replay_root, games[game_index][1])
+                replay_root.mainloop()
+
+        tk.Button(root, text="Rejouer la partie", command=launch_replay, font=("Helvetica", 12), bg="#444", fg="white").pack(pady=10)
         root.mainloop()
 
     except Exception as e:
-        print("Erreur pendant la relecture :", e)
+        print("Erreur pendant la sélection/relecture de partie:", e)

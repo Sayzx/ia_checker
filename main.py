@@ -1,7 +1,7 @@
 from tkinter import Tk, Button, Frame, Label
 from game import Game
 from stats import GameStats
-from replay_visual import replay_game_visual
+from replay_visual import select_game_to_replay
 from iaversus import start_ia_vs_ia 
 
 
@@ -34,7 +34,7 @@ def show_menu():
     Button(container, text="Jouer", command=lambda: [root.destroy(), start_game()], **button_style).pack(pady=20)
     Button(container, text="IA vs IA", command=lambda: [root.destroy(), start_ia_vs_ia()], **button_style).pack(pady=20)
     Button(container, text="Voir les statistiques", command=lambda: GameStats().show_stats(), **button_style).pack(pady=20)
-    Button(container, text="Rejouer la dernière partie", command=lambda: [root.destroy(), replay_game_visual()], **button_style).pack(pady=20)
+    Button(container, text="Rejouer une partie", command=lambda: [root.destroy(), select_game_to_replay()], **button_style).pack(pady=20)
     Button(container, text="Quitter", command=root.quit, **button_style).pack(pady=20)
 
     root.mainloop()
