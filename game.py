@@ -8,9 +8,10 @@ from stats import GameStats
 from datetime import datetime
 
 class Game:
-    def __init__(self, root):
+    def __init__(self, root, restart_callback=None):
         self.board = Board()
-        self.gui = GUI(root, self) 
+        self.gui = GUI(root, self, restart_callback=restart_callback)
+
         self.ai = CheckersAI()
         self.current_player = "B" 
         self.selected_piece = None

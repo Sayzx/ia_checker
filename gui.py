@@ -150,6 +150,7 @@ class GUI:
                 self.root.destroy()
                 self.restart_callback()
 
+
     def resign_game(self):
         if not self.game.game_over:
             if messagebox.askyesno("Abandonner", "Êtes-vous sûr de vouloir abandonner ?"):

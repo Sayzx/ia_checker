@@ -6,9 +6,11 @@ from iaversus import start_ia_vs_ia
 
 
 def start_game():
-    game_root = Tk()
-    game = Game(game_root)
-    game_root.mainloop()
+    def launch():
+        game_root = Tk()
+        Game(game_root, restart_callback=launch)
+        game_root.mainloop()
+    launch()
 
 def show_menu():
     root = Tk()
