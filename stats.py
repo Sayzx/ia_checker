@@ -46,7 +46,6 @@ class GameStats:
         moves_df = df[df["turn"].apply(lambda x: str(x).isdigit()) & df["move"].notna()].copy()
         moves_df["turn"] = moves_df["turn"].astype(int)
 
-        # Découper les parties par quartiles pour savoir où se trouve un tour dans la partie
         def phase_label(turn, max_turn):
             if turn <= max_turn * 0.33:
                 return "Début"
@@ -58,39 +57,42 @@ class GameStats:
         result_rows = df[df["turn"].str.lower() == "résultat"]
         winners = result_rows["captured piece"].value_counts()
 
-        # Graphique 1 : Coups les plus joués
         move_counts = moves_df["move"].value_counts().head(10)
 
-        # Définir les phases de jeu
         game_ids = df[df["turn"].str.contains("---debut-partie", na=False)].index.tolist()
         end_ids = df[df["turn"].str.contains("---fin-partie", na=False)].index.tolist()
 
         phases = []
         turn_by_game = []
+        game_stats = []
         for game_number, (start_idx, end_idx) in enumerate(zip(game_ids, end_ids), 1):
             game = df.iloc[start_idx + 1:end_idx]
             game_moves = game[game["turn"].apply(lambda x: str(x).isdigit())].copy()
             game_moves["turn"] = game_moves["turn"].astype(int)
             max_turn = game_moves["turn"].max()
+            winner = df.loc[end_idx - 1, "captured piece"]
             game_moves["phase"] = game_moves["turn"].apply(lambda x: phase_label(x, max_turn))
             game_moves["move"] = game_moves.apply(lambda row: f"{row['start']}->{row['end']}" if pd.notna(row['start']) and pd.notna(row['end']) else None, axis=1)
-            game_moves["winner"] = df.loc[end_idx - 1, "captured piece"]
+            game_moves["winner"] = winner
             phases.append(game_moves)
             turn_by_game.append({"game_id": game_number, "turns": max_turn})
+            game_stats.append({"winner": winner, "turns": max_turn})
 
         phase_df = pd.concat(phases)
         turn_df = pd.DataFrame(turn_by_game)
+        stats_df = pd.DataFrame(game_stats)
 
-        # Graphique 2 : Coups les plus joués par phase
         phase_counts = phase_df.groupby(["phase", "move"]).size().unstack(fill_value=0)
         phase_counts = phase_counts.T.apply(lambda x: x.sort_values(ascending=False).head(3))
 
-        # Graphique 3 : Coups menant à la victoire par phase
         win_moves = phase_df.copy()
         win_moves = win_moves[win_moves["player"] == "N"]  # Suppose que N est IA gagnante
         win_moves = win_moves[win_moves["winner"] == "IA"]
         win_effectiveness = win_moves.groupby(["phase", "move"]).size().unstack(fill_value=0)
         win_effectiveness = win_effectiveness.T.apply(lambda x: x.sort_values(ascending=False).head(3))
+
+        # Moyenne des coups par gagnant
+        avg_turns = stats_df.groupby("winner")["turns"].mean().sort_values()
 
         # Affichage des graphiques
         fig, axs = plt.subplots(3, 2, figsize=(14, 14))
@@ -111,12 +113,16 @@ class GameStats:
         axs[1][1].set_xlabel("Fréquence de victoire")
         axs[1][1].invert_yaxis()
 
-        # Graphique 5 : Nombre de tours par partie
         axs[2][0].plot(turn_df["game_id"], turn_df["turns"], marker="o", linestyle="-", color="purple")
         axs[2][0].set_title("Nombre de tours par partie")
         axs[2][0].set_xlabel("ID Partie")
         axs[2][0].set_ylabel("Nombre de tours")
 
-        axs[2][1].axis("off") 
+        # Nouveau graphique : nombre moyen de tours selon le gagnant
+        avg_turns.plot(kind="bar", ax=axs[2][1], title="Nombre moyen de tours selon le gagnant", color="orange")
+        axs[2][1].set_ylabel("Nombre moyen de tours")
+        axs[2][1].set_xlabel("Gagnant")
+
         plt.tight_layout()
         plt.show()
+
