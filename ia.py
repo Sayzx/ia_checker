@@ -5,67 +5,94 @@ import os
 class CheckersAI:
     def __init__(self, history_file="data/game_history.csv"):
         self.history_file = history_file
-        self.move_scores = self.analyze_history()
+        self.history_data = self.load_history()
 
-    def analyze_history(self):
+    def load_history(self):
         if not os.path.exists(self.history_file):
-            return {}
+            return None
 
         try:
-            df = pd.read_csv(self.history_file, encoding='utf-8-sig') 
+            df = pd.read_csv(self.history_file, encoding='utf-8-sig')
         except Exception as e:
             print(f"❌ Erreur de lecture du fichier CSV : {e}")
-            return {}
+            return None
 
         df.columns = df.columns.str.strip().str.lower()
-        print("✅ Colonnes détectées :", df.columns.tolist()) 
-
         expected = {"turn", "start", "end", "player", "captured piece"}
-        actual = set(df.columns)
 
-        if not expected.issubset(actual):
-            print("❌ Colonnes manquantes dans game_history.csv")
-            print("Il manque :", expected - actual)
-            return {}
+        if not expected.issubset(set(df.columns)):
+            print("❌ Colonnes manquantes :", expected - set(df.columns))
+            return None
 
-        move_results = {}
-        current_winner = None
+        return df
 
-        for _, row in df.iterrows():
-            turn = row["turn"]
+    def evaluate_moves(self, board, player, valid_moves):
+        move_scores = {(start, end): 0 for start, end in valid_moves}
 
-            if isinstance(turn, str) and turn.startswith("---debut-partie"):
+        for start, end in valid_moves:
+            score = 0
+
+            # Stratégie : aller vers le centre
+            if 2 <= end[0] <= 5 and 2 <= end[1] <= 5:
+                score += 2
+
+            # Stratégie : capture
+            if hasattr(board, 'is_capture_move') and board.is_capture_move(start, end):
+                score += 10
+
+            # Stratégie : promotion
+            if player == "N" and end[0] == 0:
+                score += 5
+            elif player == "B" and end[0] == 7:
+                score += 5
+
+            # Éviter les bords
+            if end[1] in [0, 7]:
+                score -= 1
+
+            # Analyse de l'historique
+            if self.history_data is not None:
+                filtered = self.history_data[
+                    (self.history_data["start"] == str(start)) &
+                    (self.history_data["end"] == str(end)) &
+                    (self.history_data["player"] == player)
+                ]
+
+                wins = 0
+                total = 0
                 current_winner = None
 
-            elif isinstance(turn, str) and "résultat" in turn.lower():
-                current_winner = str(row["captured piece"]).strip()
+                for _, row in filtered.iterrows():
+                    turn = row["turn"]
+                    if isinstance(turn, str) and "résultat" in turn.lower():
+                        current_winner = str(row["captured piece"]).strip()
+                    elif str(turn).isdigit():
+                        if current_winner:
+                            if (player == "N" and current_winner == "IA") or (player == "B" and current_winner == "Joueur"):
+                                wins += 1
+                            total += 1
 
-            elif str(turn).isdigit():
-                start = row["start"]
-                end = row["end"]
-                player = row["player"]
-                move_key = f"{start}->{end}"
+                if total > 0:
+                    score += (wins / total) * 5  # pondération max +5
 
-                if current_winner and player in ["B", "N"]:
-                    win = (
-                        1 if player == "N" and current_winner == "IA" else
-                        1 if player == "B" and current_winner == "Joueur" else
-                        0
-                    )
+            move_scores[(start, end)] = score
 
-                    if move_key not in move_results:
-                        move_results[move_key] = [0, 0]
-
-                    move_results[move_key][0] += win
-                    move_results[move_key][1] += 1
-
-        scored = {}
-        for move, (wins, total) in move_results.items():
-            scored[move] = wins / total if total > 0 else 0
-
-        return scored
+        return move_scores
 
     def get_best_move(self, board, player="N"):
+        """
+        Determines the best move for the given player on the current board.
+        This function identifies all valid moves available for the player, evaluates each move
+        using the evaluate_moves method, and selects one of the moves with the highest score.
+        If multiple moves have the same highest score, one is chosen randomly.
+        Args:
+            board: The game board object containing the current state of the game.
+            player (str, optional): The player identifier ('N' for black by default).
+        Returns:
+            tuple or None: A tuple containing the source position ((row, col)) and the 
+            destination position, representing the best move. Returns None if no valid 
+            moves are available.
+        """
         valid_moves = []
 
         for row in range(8):
@@ -79,12 +106,7 @@ class CheckersAI:
         if not valid_moves:
             return None
 
-        scored_moves = []
-        for start, end in valid_moves:
-            move_str = f"{start}->{end}"
-            score = self.move_scores.get(move_str, 0.5) 
-            scored_moves.append(((start, end), score))
-
-        scored_moves.sort(key=lambda x: -x[1])
-        top_moves = scored_moves[:3] if len(scored_moves) >= 3 else scored_moves
-        return random.choice([move for move, score in top_moves])
+        scored_moves = self.evaluate_moves(board, player, valid_moves)
+        max_score = max(scored_moves.values())
+        best_moves = [move for move, score in scored_moves.items() if score == max_score]
+        return random.choice(best_moves)
